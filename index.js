@@ -5,9 +5,14 @@ require('dotenv').config()
 var jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const res = require('express/lib/response');
+// const { ObjectID } = require('bson');
 // // import { ObjectId } from "mongodb";
 // const ObjectId = require('mongodb').ObjectId
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 const port = process.env.PORT || 5000;
+
 
 app.use(cors())
 app.use(express.json())
@@ -24,6 +29,8 @@ async function run() {
         const ordersCollection = client.db("computer").collection("orders");
         const usersCollection = client.db("computer").collection("users");
         const reviewsCollection = client.db("computer").collection("reviews");
+        const myprofileCollection = client.db("computer").collection("myprofile");
+        const paymentsCollection = client.db("computer").collection("payments");
 
 
         app.get('/parts', async (req, res) => {
@@ -56,19 +63,20 @@ async function run() {
             const parts = await cursor.toArray()
             res.send(parts)
         })
-        // get order id 
 
-        // app.get('/orders/:id', async (req, res) => {
-        //     const id = req.params.id
-        //     const query = { _id: ObjectId(id) }
-        //     const cursor = await ordersCollection.findOne(query)
-        //     res.send(cursor)
-        // })
+
+        app.get('/order/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: ObjectId(id) }
+            const cursor = await ordersCollection.findOne(query)
+            res.send(cursor)
+        })
 
 
 
         app.get('/orders/myorders', async (req, res) => {
             const userEmail = req.query.email;
+
             const query = { email: userEmail }
             const order = await ordersCollection.find(query).toArray();
             res.send(order)
@@ -107,13 +115,60 @@ async function run() {
                 $set: user
             }
             const result = await usersCollection.updateOne(filter, updateDoc, options);
-            res.send(result)
+            var token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET);
+            res.send({ result, token })
 
         })
         // post Reviews
         app.post('/reviews', async (req, res) => {
             const query = req.body;
             const order = await reviewsCollection.insertOne(query);
+            res.send(order)
+        })
+
+        // payment post
+        app.post('/create-payment-intro', async (req, res) => {
+            const orderPay = req.body;
+            const price = orderPay.productPrice;
+            console.log(price)
+
+            const amount = price * 100;
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: [
+                    "card"
+                ],
+
+            })
+            console.log(paymentIntent)
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            })
+        })
+        // payment update
+        app.patch('/orders/:id', async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            console.log(id)
+            const filter = { _id: ObjectId(id) }
+            const updateDoc = {
+                $set: {
+                    paid: true,
+                    transactionID: payment.transactionId
+                }
+            }
+            const paymentResult = await paymentsCollection.insertOne(payment);
+            const result = await ordersCollection.updateOne(filter, updateDoc);
+            res.send({ updateDoc })
+
+        })
+
+
+        // my profile
+        app.post('/profile', async (req, res) => {
+            const query = req.body;
+            const order = await myprofileCollection.insertOne(query);
             res.send(order)
         })
 
