@@ -71,6 +71,12 @@ async function run() {
             const cursor = await ordersCollection.findOne(query)
             res.send(cursor)
         })
+        app.get('/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = await usersCollection.findOne({ email: email });
+            const isAdmin = user.roll == "admin";
+            res.send({ admin: isAdmin })
+        })
 
 
 
@@ -99,13 +105,27 @@ async function run() {
             const email = req.params.email;
             const filter = { email: email }
             const updateDoc = {
-                $set: { roll: 'admin-user' }
+                $set: { roll: 'admin' }
             }
             const result = await usersCollection.updateOne(filter, updateDoc);
             res.send(result)
 
         })
         //users update or insert
+        app.put('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email }
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: user
+            }
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            var token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET);
+            res.send({ result, token })
+
+        })
+
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
             const user = req.body;
