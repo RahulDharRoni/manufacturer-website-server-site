@@ -16,7 +16,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cors())
 app.use(express.json())
-// app.use(bodyParser());
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.42txn.mongodb.net/?retryWrites=true&w=majority`;
@@ -74,7 +74,7 @@ async function run() {
         app.get('/admin/:email', async (req, res) => {
             const email = req.params.email;
             const user = await usersCollection.findOne({ email: email });
-            const isAdmin = user.roll == "admin";
+            const isAdmin = user.roll === "admin";
             res.send({ admin: isAdmin })
         })
 
@@ -94,23 +94,32 @@ async function run() {
             res.send(order)
         })
         // delete order
-        app.delete('/orders/:id', async (req, res) => {
+        app.delete('/order/:id', async (req, res) => {
             const id = req.params.id
             const query = { _id: ObjectId(id) }
             const result = await ordersCollection.deleteOne(query)
             res.send(result)
         })
         // admin user
-        app.put('users/admin/:email', async (req, res) => {
+        app.put('/user/admin/:email', async (req, res) => {
             const email = req.params.email;
-            const filter = { email: email }
+            const filter = { email: email };
             const updateDoc = {
-                $set: { roll: 'admin' }
-            }
+                $set: { role: 'admin' },
+            };
             const result = await usersCollection.updateOne(filter, updateDoc);
-            res.send(result)
-
+            res.send(result);
         })
+        // app.put('user/admin/:email', async (req, res) => {
+        //     const email = req.params.email;
+        //     const filter = { email: email }
+        //     const updateDoc = {
+        //         $set: { roll: 'admin' }
+        //     }
+        //     const result = await usersCollection.updateOne(filter, updateDoc);
+        //     res.send(result)
+
+        // })
         //users update or insert
         app.put('/users/:email', async (req, res) => {
             const email = req.params.email;
@@ -126,19 +135,19 @@ async function run() {
 
         })
 
-        app.put('/users/:email', async (req, res) => {
-            const email = req.params.email;
-            const user = req.body;
-            const filter = { email: email }
-            const options = { upsert: true };
-            const updateDoc = {
-                $set: user
-            }
-            const result = await usersCollection.updateOne(filter, updateDoc, options);
-            var token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET);
-            res.send({ result, token })
+        // app.put('/users/:email', async (req, res) => {
+        //     const email = req.params.email;
+        //     const user = req.body;
+        //     const filter = { email: email }
+        //     const options = { upsert: true };
+        //     const updateDoc = {
+        //         $set: user
+        //     }
+        //     const result = await usersCollection.updateOne(filter, updateDoc, options);
+        //     var token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET);
+        //     res.send({ result, token })
 
-        })
+        // })
         // post Reviews
         app.post('/reviews', async (req, res) => {
             const query = req.body;
