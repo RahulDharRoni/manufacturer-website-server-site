@@ -101,7 +101,7 @@ async function run() {
             res.send(result)
         })
         // admin user
-        app.put('/users/admin/:email', async (req, res) => {
+        app.put('users/admin/:email', async (req, res) => {
             const email = req.params.email;
             const filter = { email: email }
             const updateDoc = {
